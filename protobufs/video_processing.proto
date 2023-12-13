@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package videoProcessing;
+
+option go_package = "github.com/jackjohn7/webview/api-gateway/pb";
+
+service VideoProcessingService {
+  rpc ProcessNewVideo(ProcessVideoRequest) returns (ProcessedVideoData);
+
+  rpc DeleteVideo(DeleteVideoRequest) returns (DeleteVideoResponse);
+
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {
+  string msg = 1;
+}
+
+message HealthCheckResponse {
+  string msg = 1;
+}
+
+message ProcessVideoRequest {
+  bytes data = 1;
+  string video_id = 2;
+}
+
+message ProcessedVideoData {
+  string thumbnail_id = 1;
+}
+
+message DeleteVideoRequest {
+  string video_id = 1;
+}
+
+message DeleteVideoResponse {
+  bool deleted = 1;
+}
