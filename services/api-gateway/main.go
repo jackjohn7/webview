@@ -33,7 +33,7 @@ func main() {
 	videoProcessingClient := pb.NewVideoProcessingServiceClient(conn)
 	videoStreamingClient := pb.NewVideoStreamingServiceClient(conn)
 
-	a, err := videoStreamingClient.GetRecentVideos(context.Background(), &pb.RecentVideosRequest{Offset: 0, Range: 10})
+	a, err := videoStreamingClient.GetRecentVideos(context.Background(), &pb.RecentVideosRequest{Offset: 0, Range: 4})
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -44,7 +44,17 @@ func main() {
 	}
 
 	fmt.Printf("%s\n", x.Msg)
-	fmt.Println(a)
+
+	for {
+		vid, err := a.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatalf("%v.GetRecentVideos(_) = _, %v", videoStreamingClient, err)
+		}
+		log.Println(vid)
+	}
 
 	video.NewVideoController(mux, &videoProcessingClient)
 
