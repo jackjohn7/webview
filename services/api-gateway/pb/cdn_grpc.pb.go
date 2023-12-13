@@ -23,6 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type VideoStreamingServiceClient interface {
 	StreamVideoChunk(ctx context.Context, in *VideoChunkRequest, opts ...grpc.CallOption) (*VideoChunk, error)
+	GetRecentVideos(ctx context.Context, in *RecentVideosRequest, opts ...grpc.CallOption) (VideoStreamingService_GetRecentVideosClient, error)
 }
 
 type videoStreamingServiceClient struct {
@@ -42,11 +43,44 @@ func (c *videoStreamingServiceClient) StreamVideoChunk(ctx context.Context, in *
 	return out, nil
 }
 
+func (c *videoStreamingServiceClient) GetRecentVideos(ctx context.Context, in *RecentVideosRequest, opts ...grpc.CallOption) (VideoStreamingService_GetRecentVideosClient, error) {
+	stream, err := c.cc.NewStream(ctx, &VideoStreamingService_ServiceDesc.Streams[0], "/videoStreaming.VideoStreamingService/GetRecentVideos", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &videoStreamingServiceGetRecentVideosClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type VideoStreamingService_GetRecentVideosClient interface {
+	Recv() (*RecentVideos, error)
+	grpc.ClientStream
+}
+
+type videoStreamingServiceGetRecentVideosClient struct {
+	grpc.ClientStream
+}
+
+func (x *videoStreamingServiceGetRecentVideosClient) Recv() (*RecentVideos, error) {
+	m := new(RecentVideos)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // VideoStreamingServiceServer is the server API for VideoStreamingService service.
 // All implementations must embed UnimplementedVideoStreamingServiceServer
 // for forward compatibility
 type VideoStreamingServiceServer interface {
 	StreamVideoChunk(context.Context, *VideoChunkRequest) (*VideoChunk, error)
+	GetRecentVideos(*RecentVideosRequest, VideoStreamingService_GetRecentVideosServer) error
 	mustEmbedUnimplementedVideoStreamingServiceServer()
 }
 
@@ -56,6 +90,9 @@ type UnimplementedVideoStreamingServiceServer struct {
 
 func (UnimplementedVideoStreamingServiceServer) StreamVideoChunk(context.Context, *VideoChunkRequest) (*VideoChunk, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StreamVideoChunk not implemented")
+}
+func (UnimplementedVideoStreamingServiceServer) GetRecentVideos(*RecentVideosRequest, VideoStreamingService_GetRecentVideosServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetRecentVideos not implemented")
 }
 func (UnimplementedVideoStreamingServiceServer) mustEmbedUnimplementedVideoStreamingServiceServer() {}
 
@@ -88,6 +125,27 @@ func _VideoStreamingService_StreamVideoChunk_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _VideoStreamingService_GetRecentVideos_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(RecentVideosRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(VideoStreamingServiceServer).GetRecentVideos(m, &videoStreamingServiceGetRecentVideosServer{stream})
+}
+
+type VideoStreamingService_GetRecentVideosServer interface {
+	Send(*RecentVideos) error
+	grpc.ServerStream
+}
+
+type videoStreamingServiceGetRecentVideosServer struct {
+	grpc.ServerStream
+}
+
+func (x *videoStreamingServiceGetRecentVideosServer) Send(m *RecentVideos) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // VideoStreamingService_ServiceDesc is the grpc.ServiceDesc for VideoStreamingService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -100,6 +158,12 @@ var VideoStreamingService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _VideoStreamingService_StreamVideoChunk_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "GetRecentVideos",
+			Handler:       _VideoStreamingService_GetRecentVideos_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "cdn.proto",
 }

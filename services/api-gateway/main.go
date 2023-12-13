@@ -30,16 +30,23 @@ func main() {
 	}
 	defer conn.Close()
 
-	f := pb.NewVideoProcessingServiceClient(conn)
+	videoProcessingClient := pb.NewVideoProcessingServiceClient(conn)
+	videoStreamingClient := pb.NewVideoStreamingServiceClient(conn)
 
-	x, err := f.HealthCheck(context.Background(), &pb.HealthCheckRequest{Msg:"Ping"})
+	a, err := videoStreamingClient.GetRecentVideos(context.Background(), &pb.RecentVideosRequest{Offset: 0, Range: 10})
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	x, err := videoProcessingClient.HealthCheck(context.Background(), &pb.HealthCheckRequest{Msg:"Ping"})
 	if err != nil {
 		log.Fatalln(err)
 	}
 
 	fmt.Printf("%s", x.Msg)
+	fmt.Println(a)
 
-	video.NewVideoController(mux, &f)
+	video.NewVideoController(mux, &videoProcessingClient)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "Welcome to the gateway! You probably shouldn't be here.")
