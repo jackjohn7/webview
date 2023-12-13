@@ -26,7 +26,7 @@ impl VideoProcessingService for MyVideoProcessor {
     }
     async fn health_check(&self, _request: Request<HealthCheckRequest>)
         -> Result<Response<HealthCheckResponse>, Status> {
-        Ok(Response::new(HealthCheckResponse { msg: "pongCUH".to_owned() }))
+        Ok(Response::new(HealthCheckResponse { msg: "pong".to_owned() }))
     }
 }
 
