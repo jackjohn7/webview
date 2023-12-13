@@ -43,7 +43,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	fmt.Printf("%s", x.Msg)
+	fmt.Printf("%s\n", x.Msg)
 	fmt.Println(a)
 
 	video.NewVideoController(mux, &videoProcessingClient)
