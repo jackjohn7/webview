@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use tokio::sync::mpsc;
 use tonic::{Request, Response, Status};
 use tokio_stream::{wrappers::ReceiverStream};
@@ -11,13 +13,24 @@ use crate::video_processing::{
     HealthCheckResponse
 };
 
-#[derive(Default)]
-pub struct MyVideoProcessor {}
+use crate::bucketing::BucketStorageService;
+use s3::Bucket;
+
+pub struct MyVideoProcessor {
+    storage_bucket: Arc<Bucket>
+}
+
+impl MyVideoProcessor {
+    pub fn new(bucket: Arc<Bucket>) -> Self {
+        Self{ storage_bucket: bucket }
+    }
+}
 
 #[tonic::async_trait]
 impl VideoProcessingService for MyVideoProcessor {
     async fn process_new_video(&self, _request: Request<ProcessVideoRequest>)
         -> Result<Response<ProcessedVideoData>, Status> {
+        let t = _request.into_inner().data.as_slice();
         Ok(Response::new(ProcessedVideoData { thumbnail_id: "temp".to_owned(), }))
     }
     async fn delete_video(&self, _request: Request<DeleteVideoRequest>)
@@ -33,15 +46,22 @@ impl VideoProcessingService for MyVideoProcessor {
 use crate::video_streaming::{VideoChunkRequest, VideoChunk, RecentVideos, RecentVideosRequest};
 use crate::video_streaming::video_streaming_service_server::VideoStreamingService;
 
-#[derive(Default)]
-pub struct MyVideoCDN {}
+pub struct MyVideoCDN {
+    storage_bucket: Arc<Bucket>
+}
+
+impl MyVideoCDN {
+    pub fn new(bucket: Arc<Bucket>) -> Self {
+        Self{ storage_bucket: bucket }
+    }
+}
 
 #[tonic::async_trait]
 impl VideoStreamingService for MyVideoCDN {
 
     type GetRecentVideosStream = ReceiverStream<Result<RecentVideos, Status>>;
 
-    async fn stream_video_chunk(&self, request: Request<VideoChunkRequest>) -> Result<Response<VideoChunk>,Status> {
+    async fn stream_video_chunk(&self, request: Request<VideoChunkRequest>) -> Result<Response<VideoChunk>, Status> {
         let req = request.into_inner();
         Ok(Response::new(VideoChunk { data: vec![3, 2], chunk_idx: req.chunk_idx, next_chunk_idx: req.chunk_idx + 1 }))
     }

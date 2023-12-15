@@ -12,6 +12,9 @@ futures = "0.3.29"
 tonic = "0.10.2"
 prost = "0.12.3"
 tonic-reflection = "0.10.2"
+rust-s3 = "0.34.0-rc3"
+aws-creds = "0.36.0"
+aws-region = "0.25.4"
 
 [build-dependencies]
 tonic-build = "0.10"
