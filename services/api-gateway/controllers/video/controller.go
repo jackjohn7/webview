@@ -1,52 +1,67 @@
 package video
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
-	"github.com/jackjohn7/webview/api-gateway/pb"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+
+	"github.com/jackjohn7/webview/api-gateway/pb"
 )
 
 type VideoController struct {
 	mux *echo.Echo
-	videoService *pb.VideoProcessingServiceClient
+	videoProcessingService *pb.VideoProcessingServiceClient
 }
 
 func NewVideoController(mux *echo.Echo, videoService *pb.VideoProcessingServiceClient) *VideoController {
 	c := &VideoController{
 		mux: mux,
-		videoService: videoService,
+		videoProcessingService: videoService,
 	}
 	c.RegisterRoutes()
 	return c
 }
 
 func (c *VideoController) RegisterRoutes() {
-	c.mux.POST("/upload-video", func(c echo.Context) error {
-		fmt.Println("route hit!")
-		redirectLink := c.QueryParam("redirectTo")
+	c.mux.POST("/upload-video", func(ctx echo.Context) error {
+		redirectLink := ctx.QueryParam("redirectTo")
 		if redirectLink == "" {
-			return c.Redirect(http.StatusBadRequest, "/")
+			return ctx.Redirect(http.StatusBadRequest, "/")
 		}
 
-		form, err := c.MultipartForm()
+		fileAttachment, err := ctx.FormFile("video-attachment")
 		if err != nil {
-			return c.Redirect(http.StatusBadRequest, redirectLink)
+			return ctx.Redirect(http.StatusBadRequest, redirectLink)
 		}
 
-		video := form.File["video-attachment"]
+		video, err := fileAttachment.Open()
+		if err != nil {
+			return ctx.Redirect(http.StatusBadRequest, redirectLink)
+		}
+		bytes := make([]byte, fileAttachment.Size)
+		video.Read(bytes)
 
-		fmt.Println("we here fr")
+		videoId := uuid.New().String()
 
-		if len(video) != 1 {
-			return c.Redirect(http.StatusBadRequest, redirectLink)
+		fmt.Println("MADE IT HERE")
+		service := *c.videoProcessingService
+
+		fmt.Println("MADE IT HERE TOO")
+		responseData, err := service.ProcessNewVideo(context.Background(), &pb.ProcessVideoRequest{
+			Data: bytes,
+			VideoId: videoId,
+		})
+		if err != nil {
+			fmt.Println("Somethign errored in the api call")
+			fmt.Println(err)
+			return ctx.Redirect(303, redirectLink)
 		}
 
-		fmt.Println("bro got the files")
+		redirectLink = fmt.Sprintf("%s?videoId=%s&videoThumbnail=%s", redirectLink, videoId, responseData.ThumbnailId)
 
-		fmt.Println(redirectLink)
-
-		return c.Redirect(200, "/")
+		return ctx.Redirect(303, redirectLink)
 	})
 }

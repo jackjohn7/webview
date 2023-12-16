@@ -28,9 +28,13 @@ impl MyVideoProcessor {
 
 #[tonic::async_trait]
 impl VideoProcessingService for MyVideoProcessor {
-    async fn process_new_video(&self, _request: Request<ProcessVideoRequest>)
+    async fn process_new_video(&self, req: Request<ProcessVideoRequest>)
         -> Result<Response<ProcessedVideoData>, Status> {
-        let t = _request.into_inner().data.as_slice();
+        let req_body = req.into_inner();
+        let video_id = req_body.video_id;
+        let _raw_bytes = req_body.data;
+
+        println!("User uploaded video with id: {}", video_id);
         Ok(Response::new(ProcessedVideoData { thumbnail_id: "temp".to_owned(), }))
     }
     async fn delete_video(&self, _request: Request<DeleteVideoRequest>)

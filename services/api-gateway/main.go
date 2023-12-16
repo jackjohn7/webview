@@ -20,6 +20,7 @@ import (
 func main() {
 	fmt.Println("Starting API-Gateway")
 	app := echo.New()
+	app.Use(middleware.Logger())
 	app.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		//AllowOrigins: []string{"http://localhost:3000", "http://localhost:5173"},
 		AllowOrigins: []string{"*"},
