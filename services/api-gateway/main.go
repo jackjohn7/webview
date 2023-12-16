@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -17,7 +19,13 @@ import (
 
 func main() {
 	fmt.Println("Starting API-Gateway")
-	mux := http.NewServeMux()
+	app := echo.New()
+	app.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		//AllowOrigins: []string{"http://localhost:3000", "http://localhost:5173"},
+		AllowOrigins: []string{"*"},
+		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept},
+		AllowCredentials: true,
+	}))
 
 	addr := os.Getenv("VIDEO_SERVICE_ADDR")
 	if addr == "" {
@@ -56,11 +64,11 @@ func main() {
 		log.Println(vid)
 	}
 
-	video.NewVideoController(mux, &videoProcessingClient)
+	video.NewVideoController(app, &videoProcessingClient)
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		io.WriteString(w, "Welcome to the gateway! You probably shouldn't be here.")
+	app.GET("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "Welcome to the gateway! You probably shouldn't be here.")
 	})
 
-	http.ListenAndServe("0.0.0.0:3000", mux)
+	app.Start(":3000")
 }

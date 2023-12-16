@@ -3,3 +3,4 @@
 # ignore generated pb files
 services/video_service/src/video_processing.rs
 services/video_service/src/video_streaming.rs
+minio

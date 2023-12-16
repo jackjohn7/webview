@@ -22,7 +22,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         region: "us-west-3".to_owned(),
         endpoint: "http://localhost:9000".to_owned(),
     };
-    let credentials = Credentials::default()?;
+    let credentials = Credentials::new(Some("ROOTNAME"), Some("CHANGEME123"), None, None, None)?;
     let mut bucket =
         Bucket::new(bucket_name, region.clone(), credentials.clone())?.with_path_style();
 
