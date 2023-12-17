@@ -5,7 +5,7 @@ package videoProcessing;
 option go_package = "github.com/jackjohn7/webview/api-gateway/pb";
 
 service VideoProcessingService {
-  rpc ProcessNewVideo(ProcessVideoRequest) returns (ProcessedVideoData);
+  rpc ProcessNewVideo(stream ProcessVideoRequest) returns (ProcessedVideoData);
 
   rpc DeleteVideo(DeleteVideoRequest) returns (DeleteVideoResponse);
 

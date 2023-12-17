@@ -22,7 +22,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type VideoProcessingServiceClient interface {
-	ProcessNewVideo(ctx context.Context, in *ProcessVideoRequest, opts ...grpc.CallOption) (*ProcessedVideoData, error)
+	ProcessNewVideo(ctx context.Context, opts ...grpc.CallOption) (VideoProcessingService_ProcessNewVideoClient, error)
 	DeleteVideo(ctx context.Context, in *DeleteVideoRequest, opts ...grpc.CallOption) (*DeleteVideoResponse, error)
 	HealthCheck(ctx context.Context, in *HealthCheckRequest, opts ...grpc.CallOption) (*HealthCheckResponse, error)
 }
@@ -35,13 +35,38 @@ func NewVideoProcessingServiceClient(cc grpc.ClientConnInterface) VideoProcessin
 	return &videoProcessingServiceClient{cc}
 }
 
-func (c *videoProcessingServiceClient) ProcessNewVideo(ctx context.Context, in *ProcessVideoRequest, opts ...grpc.CallOption) (*ProcessedVideoData, error) {
-	out := new(ProcessedVideoData)
-	err := c.cc.Invoke(ctx, "/videoProcessing.VideoProcessingService/ProcessNewVideo", in, out, opts...)
+func (c *videoProcessingServiceClient) ProcessNewVideo(ctx context.Context, opts ...grpc.CallOption) (VideoProcessingService_ProcessNewVideoClient, error) {
+	stream, err := c.cc.NewStream(ctx, &VideoProcessingService_ServiceDesc.Streams[0], "/videoProcessing.VideoProcessingService/ProcessNewVideo", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &videoProcessingServiceProcessNewVideoClient{stream}
+	return x, nil
+}
+
+type VideoProcessingService_ProcessNewVideoClient interface {
+	Send(*ProcessVideoRequest) error
+	CloseAndRecv() (*ProcessedVideoData, error)
+	grpc.ClientStream
+}
+
+type videoProcessingServiceProcessNewVideoClient struct {
+	grpc.ClientStream
+}
+
+func (x *videoProcessingServiceProcessNewVideoClient) Send(m *ProcessVideoRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *videoProcessingServiceProcessNewVideoClient) CloseAndRecv() (*ProcessedVideoData, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(ProcessedVideoData)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func (c *videoProcessingServiceClient) DeleteVideo(ctx context.Context, in *DeleteVideoRequest, opts ...grpc.CallOption) (*DeleteVideoResponse, error) {
@@ -66,7 +91,7 @@ func (c *videoProcessingServiceClient) HealthCheck(ctx context.Context, in *Heal
 // All implementations must embed UnimplementedVideoProcessingServiceServer
 // for forward compatibility
 type VideoProcessingServiceServer interface {
-	ProcessNewVideo(context.Context, *ProcessVideoRequest) (*ProcessedVideoData, error)
+	ProcessNewVideo(VideoProcessingService_ProcessNewVideoServer) error
 	DeleteVideo(context.Context, *DeleteVideoRequest) (*DeleteVideoResponse, error)
 	HealthCheck(context.Context, *HealthCheckRequest) (*HealthCheckResponse, error)
 	mustEmbedUnimplementedVideoProcessingServiceServer()
@@ -76,8 +101,8 @@ type VideoProcessingServiceServer interface {
 type UnimplementedVideoProcessingServiceServer struct {
 }
 
-func (UnimplementedVideoProcessingServiceServer) ProcessNewVideo(context.Context, *ProcessVideoRequest) (*ProcessedVideoData, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ProcessNewVideo not implemented")
+func (UnimplementedVideoProcessingServiceServer) ProcessNewVideo(VideoProcessingService_ProcessNewVideoServer) error {
+	return status.Errorf(codes.Unimplemented, "method ProcessNewVideo not implemented")
 }
 func (UnimplementedVideoProcessingServiceServer) DeleteVideo(context.Context, *DeleteVideoRequest) (*DeleteVideoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteVideo not implemented")
@@ -99,22 +124,30 @@ func RegisterVideoProcessingServiceServer(s grpc.ServiceRegistrar, srv VideoProc
 	s.RegisterService(&VideoProcessingService_ServiceDesc, srv)
 }
 
-func _VideoProcessingService_ProcessNewVideo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ProcessVideoRequest)
-	if err := dec(in); err != nil {
+func _VideoProcessingService_ProcessNewVideo_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(VideoProcessingServiceServer).ProcessNewVideo(&videoProcessingServiceProcessNewVideoServer{stream})
+}
+
+type VideoProcessingService_ProcessNewVideoServer interface {
+	SendAndClose(*ProcessedVideoData) error
+	Recv() (*ProcessVideoRequest, error)
+	grpc.ServerStream
+}
+
+type videoProcessingServiceProcessNewVideoServer struct {
+	grpc.ServerStream
+}
+
+func (x *videoProcessingServiceProcessNewVideoServer) SendAndClose(m *ProcessedVideoData) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *videoProcessingServiceProcessNewVideoServer) Recv() (*ProcessVideoRequest, error) {
+	m := new(ProcessVideoRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
-	if interceptor == nil {
-		return srv.(VideoProcessingServiceServer).ProcessNewVideo(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/videoProcessing.VideoProcessingService/ProcessNewVideo",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VideoProcessingServiceServer).ProcessNewVideo(ctx, req.(*ProcessVideoRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return m, nil
 }
 
 func _VideoProcessingService_DeleteVideo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -161,10 +194,6 @@ var VideoProcessingService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*VideoProcessingServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "ProcessNewVideo",
-			Handler:    _VideoProcessingService_ProcessNewVideo_Handler,
-		},
-		{
 			MethodName: "DeleteVideo",
 			Handler:    _VideoProcessingService_DeleteVideo_Handler,
 		},
@@ -173,6 +202,12 @@ var VideoProcessingService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _VideoProcessingService_HealthCheck_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "ProcessNewVideo",
+			Handler:       _VideoProcessingService_ProcessNewVideo_Handler,
+			ClientStreams: true,
+		},
+	},
 	Metadata: "video_processing.proto",
 }

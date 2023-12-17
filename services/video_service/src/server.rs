@@ -1,7 +1,11 @@
+use std::fs::{self, File};
+use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use futures::stream::StreamExt;
 
 use tokio::sync::mpsc;
-use tonic::{Request, Response, Status};
+use tonic::{Request, Response, Status, Streaming};
 use tokio_stream::{wrappers::ReceiverStream};
 use crate::video_processing::{
     video_processing_service_server::VideoProcessingService,
@@ -28,11 +32,44 @@ impl MyVideoProcessor {
 
 #[tonic::async_trait]
 impl VideoProcessingService for MyVideoProcessor {
-    async fn process_new_video(&self, req: Request<ProcessVideoRequest>)
+    async fn process_new_video(&self, req: Request<Streaming<ProcessVideoRequest>>)
         -> Result<Response<ProcessedVideoData>, Status> {
-        let req_body = req.into_inner();
-        let video_id = req_body.video_id;
-        let _raw_bytes = req_body.data;
+        let mut stream = req.into_inner();
+        let mut video_id: String = String::new();
+        let mut video_data = Vec::new();
+        while let Some(chunk_result) = stream.next().await {
+            match chunk_result {
+                Ok(chunk) => {
+                    let bytes = chunk.data;
+                    video_data.extend_from_slice(&bytes);
+                    video_id = chunk.video_id;
+                },
+                Err(err) => {
+                    return Err(Status::aborted(format!("Error receiving video chunk: {}", err)));
+                }
+            }
+        }
+        // upload video to MinIO
+        println!("num bytes: {}", video_data.len());
+
+        // create temporary directory
+        let storage_dir = format!("./temporary_storage/{}", video_id);
+        fs::create_dir_all(&storage_dir).map_err(|e| {
+            Status::internal(format!("Failed to create storage directory: {}", e))
+        })?;
+        // Create a unique filename for the stored file (e.g., using a timestamp)
+        let file_name = format!("stored_file_{}.mp4", video_id);
+
+        // Combine the storage directory and filename to get the full path
+        let file_path = PathBuf::from(storage_dir).as_path().join(&file_name);
+
+        // Open the file for writing
+        let mut file = File::create(&file_path).map_err(|e| {
+            Status::internal(format!("Failed to create file: {}", e))
+        })?;
+
+        // Write the bytes to the file
+        file.write_all(&video_data)?;
 
         println!("User uploaded video with id: {}", video_id);
         Ok(Response::new(ProcessedVideoData { thumbnail_id: "temp".to_owned(), }))

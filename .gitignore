@@ -4,3 +4,6 @@
 services/video_service/src/video_processing.rs
 services/video_service/src/video_streaming.rs
 minio
+
+# ignore temp storage for video processing
+**/*/temporary_storage
