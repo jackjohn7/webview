@@ -1,9 +1,11 @@
+use std::fmt::Debug;
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use futures::stream::StreamExt;
 
+use s3::error::S3Error;
 use tokio::sync::mpsc;
 use tonic::{Request, Response, Status, Streaming};
 use tokio_stream::{wrappers::ReceiverStream};
@@ -90,8 +92,17 @@ impl VideoProcessingService for MyVideoProcessor {
         match chunks_result {
             Ok(chunks) => {
                 // after chunking, save all files in MinIO
+                for chunk in chunks {
+                    match self.storage_bucket.put_object(format!("{}_chunk_{}", video_id, chunk.idx), fs::read(chunk.path).unwrap().as_slice()).await {
+                        Err(_) => { return Err(Status::aborted("Failed to upload chunk to MinIO")) },
+                        _ => {}
+                    }
+                }
 
                 // after saving to MinIO, delete temporary storage files
+                fs::remove_dir_all(&storage_dir).map_err(|e| {
+                    Status::internal(format!("Failed to create storage directory: {}", e))
+                })?;
 
                 // update metadata storage with num_chunks and duration
 

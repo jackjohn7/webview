@@ -2,8 +2,8 @@ use std::path::PathBuf;
 use std::process::Command;
 
 pub struct VideoChunk {
-    idx: u64,
-    path: PathBuf
+    pub idx: u64,
+    pub path: PathBuf
 }
 
 pub fn compress_video<'a>(id: &String, og_path: &PathBuf, output_path: PathBuf) -> Result<PathBuf, &'a str> {
