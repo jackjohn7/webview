@@ -1,5 +1,13 @@
 FROM rust:1.72.0 as BUILDER
 
+ENV PATH "$PATH:/usr/bin/protoc"
+ENV PROTOC=/usr/bin/protoc
+# Still will need to figure out how to replicate the protobufs for the build in Docker
+RUN apt update && apt upgrade -y
+
+RUN apt install -y protobuf-compiler
+
+RUN apt-get -y extra-runtime-dependencies & rm -rf /var/lib/apt/lists/*
 WORKDIR /usr/src/video_service
 
 COPY . .
@@ -8,13 +16,15 @@ RUN cargo install --path .
 
 FROM debian:buster-slim
 
-RUN apt update
+RUN apt update && apt upgrade -y
 
 # Error is occurring. Cannot find protoc
 #  Err msg suggests setting "PROTOC" environment variable
+ENV PATH "$PATH:/usr/bin/protoc"
+ENV PROTOC=/usr/bin/protoc
 # Also will need to figure out how to replicate the protobufs for the build in Docker
 
-RUN apt install -y ffmpeg protobuf-compiler
+RUN apt install -y ffmpeg
 
 RUN apt-get -y extra-runtime-dependencies & rm -rf /var/lib/apt/lists/*
 
