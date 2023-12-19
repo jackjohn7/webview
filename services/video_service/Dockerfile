@@ -1,7 +1,5 @@
 FROM rust:1.72.0 as BUILDER
 
-ENV PATH "$PATH:/usr/bin/protoc"
-ENV PROTOC=/usr/bin/protoc
 # Still will need to figure out how to replicate the protobufs for the build in Docker
 RUN apt update && apt upgrade -y
 
