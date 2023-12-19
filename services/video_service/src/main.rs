@@ -2,6 +2,7 @@ mod server;
 mod video_processing;
 mod video_streaming;
 mod bucketing;
+mod utils;
 
 use std::sync::Arc;
 

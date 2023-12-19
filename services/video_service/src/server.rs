@@ -7,6 +7,7 @@ use futures::stream::StreamExt;
 use tokio::sync::mpsc;
 use tonic::{Request, Response, Status, Streaming};
 use tokio_stream::{wrappers::ReceiverStream};
+use crate::utils::files::{get_video_duration, chunk_video_data, compress_video};
 use crate::video_processing::{
     video_processing_service_server::VideoProcessingService,
     ProcessVideoRequest,
@@ -58,10 +59,10 @@ impl VideoProcessingService for MyVideoProcessor {
             Status::internal(format!("Failed to create storage directory: {}", e))
         })?;
         // Create a unique filename for the stored file (e.g., using a timestamp)
-        let file_name = format!("stored_file_{}.mp4", video_id);
+        let file_name = format!("{}_whole.mp4", video_id);
 
         // Combine the storage directory and filename to get the full path
-        let file_path = PathBuf::from(storage_dir).as_path().join(&file_name);
+        let file_path = PathBuf::from(&storage_dir).as_path().join(&file_name);
 
         // Open the file for writing
         let mut file = File::create(&file_path).map_err(|e| {
@@ -70,9 +71,35 @@ impl VideoProcessingService for MyVideoProcessor {
 
         // Write the bytes to the file
         file.write_all(&video_data)?;
+        // get duration of video
+        let duration = get_video_duration(&file_path);
+        println!("duration: {}", duration);
+        // after writing the whole video, compress the video using ffmpeg (will need to update filepath)
+        let file_path = compress_video(&video_id, &file_path, PathBuf::from(&storage_dir));
+        if let Err(err) = file_path {
+            return Err(Status::aborted(err))
+        }
+        let file_path = file_path.unwrap();
 
-        println!("User uploaded video with id: {}", video_id);
-        Ok(Response::new(ProcessedVideoData { thumbnail_id: "temp".to_owned(), }))
+        // after compressing, break compressed video into chunks
+        let chunks_result = chunk_video_data(
+            &video_id,
+            &file_path,
+            PathBuf::from(&storage_dir),
+            duration, 5);
+        match chunks_result {
+            Ok(chunks) => {
+                // after chunking, save all files in MinIO
+
+                // after saving to MinIO, delete temporary storage files
+
+                // update metadata storage with num_chunks and duration
+
+                println!("User uploaded video with id: {}", video_id);
+                Ok(Response::new(ProcessedVideoData { thumbnail_id: "temp".to_owned(), }))
+            }
+            Err(err) => Err(Status::aborted(err))
+        }
     }
     async fn delete_video(&self, _request: Request<DeleteVideoRequest>)
         -> Result<Response<DeleteVideoResponse>, Status> {
