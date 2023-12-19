@@ -39,6 +39,10 @@ func (c *VideoController) RegisterRoutes() {
 			return ctx.Redirect(http.StatusBadRequest, redirectLink)
 		}
 
+		if fileAttachment.Size == 0 {
+			return ctx.Redirect(http.StatusBadRequest, redirectLink)
+		}
+
 		fmt.Printf("file with size: %d", fileAttachment.Size);
 
 		video, err := fileAttachment.Open()

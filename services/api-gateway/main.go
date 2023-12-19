@@ -1,9 +1,7 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -40,30 +38,32 @@ func main() {
 	defer conn.Close()
 
 	videoProcessingClient := pb.NewVideoProcessingServiceClient(conn)
-	videoStreamingClient := pb.NewVideoStreamingServiceClient(conn)
+	_ = pb.NewVideoStreamingServiceClient(conn)
 
-	a, err := videoStreamingClient.GetRecentVideos(context.Background(), &pb.RecentVideosRequest{Offset: 0, Range: 4})
-	if err != nil {
-		log.Fatalln(err)
-	}
+	// EXAMPLE CALL
 
-	x, err := videoProcessingClient.HealthCheck(context.Background(), &pb.HealthCheckRequest{Msg:"Ping"})
-	if err != nil {
-		log.Fatalln(err)
-	}
+	//a, err := videoStreamingClient.GetRecentVideos(context.Background(), &pb.RecentVideosRequest{Offset: 0, Range: 4})
+	//if err != nil {
+	//	log.Fatalln(err)
+	//}
 
-	fmt.Printf("%s\n", x.Msg)
+	//x, err := videoProcessingClient.HealthCheck(context.Background(), &pb.HealthCheckRequest{Msg:"Ping"})
+	//if err != nil {
+	//	log.Fatalln(err)
+	//}
 
-	for {
-		vid, err := a.Recv()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Fatalf("%v.GetRecentVideos(_) = _, %v", videoStreamingClient, err)
-		}
-		log.Println(vid)
-	}
+	//fmt.Printf("%s\n", x.Msg)
+
+	//for {
+	//	vid, err := a.Recv()
+	//	if err == io.EOF {
+	//		break
+	//	}
+	//	if err != nil {
+	//		log.Fatalf("%v.GetRecentVideos(_) = _, %v", videoStreamingClient, err)
+	//	}
+	//	log.Println(vid)
+	//}
 
 	video.NewVideoController(app, &videoProcessingClient)
 
