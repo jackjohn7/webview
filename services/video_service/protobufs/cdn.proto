@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package videoStreaming;
+
+option go_package = "github.com/jackjohn7/webview/api-gateway/pb";
+
+service VideoStreamingService {
+  rpc StreamVideoChunk(VideoChunkRequest) returns (VideoChunk);
+  rpc GetRecentVideos(RecentVideosRequest) returns (stream RecentVideos);
+}
+
+message VideoChunk {
+  bytes data = 1;
+  int32 chunk_idx = 2;
+  int32 next_chunk_idx = 3;
+}
+
+message VideoChunkRequest {
+  string video_id = 1;
+  int32 chunk_idx = 2;
+}
+
+message RecentVideosRequest {
+  int32 offset = 1;
+  int32 range = 2;
+}
+
+message RecentVideos {
+  string video_id = 1;
+  string video_title = 2;
+  string video_thumbnail_id = 3;
+  string upload_date = 4;
+}

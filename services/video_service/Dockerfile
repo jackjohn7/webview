@@ -1,4 +1,4 @@
-FROM rust:1.72.0 as BUILDER
+FROM rust:bookworm as BUILDER
 
 # Still will need to figure out how to replicate the protobufs for the build in Docker
 RUN apt update && apt upgrade -y
@@ -12,7 +12,7 @@ COPY . .
 
 RUN cargo install --path .
 
-FROM debian:buster-slim
+FROM debian:bookworm-slim
 
 RUN apt update && apt upgrade -y
 
@@ -25,6 +25,8 @@ ENV PROTOC=/usr/bin/protoc
 RUN apt install -y ffmpeg
 
 RUN apt-get -y extra-runtime-dependencies & rm -rf /var/lib/apt/lists/*
+
+RUN apt install -y openssl
 
 COPY --from=BUILDER /usr/local/cargo/bin/video_service /usr/local/bin/video_service
 

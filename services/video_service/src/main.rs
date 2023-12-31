@@ -40,6 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
 
+    println!("getting here");
     let addr = "[::1]:3001".parse().unwrap();
     let processor_service = MyVideoProcessor::new(Arc::new(bucket.clone()));
     let cdn_service = MyVideoCDN::new(Arc::new(bucket));
